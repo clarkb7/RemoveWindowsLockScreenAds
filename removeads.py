@@ -2,14 +2,26 @@ import os
 import sys
 import argparse
 import json
+import functools
 
 import logging
 logger = logging.getLogger("RemoveWindowsLockScreenAds")
+
+def catch_exception(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logger.exception(e)
+            return None
+    return wrapper
 
 class AdRemover():
     def __init__(self, dry_run=False):
         self.dry_run = dry_run
 
+    @catch_exception
     def remove_ads_file(self, path):
         if not os.path.exists(path):
             raise ValueError("Path does not exist: {}".format(path))
@@ -19,15 +31,22 @@ class AdRemover():
         with open(path, 'r') as f:
             jso = json.load(f)
 
+        # Iterate list of items and pick the ones we want to keep
         keep_items = []
         for item in jso['items']:
-            prop = item['properties']
-            if "basicHotspot" == prop['template']['text']:
-                # Annoying ad
-                logger.debug("Removing ad: '{}'".format(prop['title']['text']))
-            if "infoHotspot" == prop['template']['text']:
-                # Image info/credits
-                keep_items.append(item)
+            try:
+                prop = item['properties']
+                if "basicHotspot" == prop['template']['text']:
+                    # Annoying ad
+                    logger.debug("Removing ad: '{}'".format(prop['title']['text']))
+                elif "infoHotspot" == prop['template']['text']:
+                    # Image info/credits
+                    keep_items.append(item)
+                else:
+                    logger.debug("Skipping unknown template type: {}".format(prop['template']['text']))
+            except KeyError as e:
+                logger.exception("")
+                logger.debug("Unexpected item format: {}".format(json.dumps(item)))
         jso['items'] = keep_items
 
         if not self.dry_run:
