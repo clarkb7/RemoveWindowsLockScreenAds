@@ -4,6 +4,10 @@ import argparse
 import json
 import functools
 
+import win32api
+import win32file
+import win32con
+
 import logging
 logger = logging.getLogger("RemoveWindowsLockScreenAds")
 
@@ -16,6 +20,29 @@ def catch_exception(func):
             logger.exception(e)
             return None
     return wrapper
+
+def exit_on_ctrlsignal(func):
+    """
+    Python's KeyboardInterrupt handler registers on the next
+    bytecode instruction, but since we are waiting in C code
+    in ReadDirectoryChangesW it never raises.
+    So we set our own handler here.
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        def handler(ctrltype):
+            exit(1)
+            return 1
+        win32api.SetConsoleCtrlHandler(handler, True)
+        try:
+            return func(*args, **kwargs)
+        finally:
+            win32api.SetConsoleCtrlHandler(handler, False)
+    return wrapper
+
+@exit_on_ctrlsignal
+def wrap_wait_call(func, *args, **kwargs):
+    return func(*args, **kwargs)
 
 class AdRemover():
     def __init__(self, dry_run=False):
@@ -63,6 +90,57 @@ class AdRemover():
         elif os.path.isfile(path):
             self.remove_ads_file(path)
 
+    def watch_dir(self, path):
+        if not os.path.exists(path):
+            raise ValueError("Path does not exist: {}".format(path))
+
+        if not os.path.isdir(path):
+            raise ValueError("Path is not a directory: {}".format(path))
+
+        # Run once to start
+        self.remove_ads_dir(path)
+
+        FILE_LIST_DIRECTORY = 1
+        FILE_ACTION_REMOVED = 2
+
+        while True:
+            # Get handle to directory
+            hDir = win32file.CreateFile(
+                path,
+                FILE_LIST_DIRECTORY,
+                win32con.FILE_SHARE_READ | win32con.FILE_SHARE_WRITE | win32con.FILE_SHARE_DELETE,
+                None,
+                win32con.OPEN_EXISTING,
+                win32con.FILE_FLAG_BACKUP_SEMANTICS,
+                None)
+
+            # Blocking wait for something in the directory to change or be created
+            try:
+                changes = wrap_wait_call(win32file.ReadDirectoryChangesW,
+                    hDir,
+                    100*(4*3+256*2), # Enough for 100 FILE_NOTIFY_INFORMATION WMAX_PATH structs
+                    False,
+                    win32con.FILE_NOTIFY_CHANGE_FILE_NAME |
+                    win32con.FILE_NOTIFY_CHANGE_LAST_WRITE,
+                    None,
+                    None)
+            finally:
+                # Close the handle so we can make changes to the files
+                # without being notified about it (infinite loop)
+                hDir.close()
+
+            processed = set()
+            for action, fname in changes:
+                # Skip if file is being deleted or doesn't exist
+                if action == FILE_ACTION_REMOVED or not os.path.exists(path):
+                    continue
+                # Only process each file once
+                if fname in processed:
+                    continue
+                processed.add(fname)
+                filepath = os.path.join(path, fname)
+                self.remove_ads_file(filepath)
+
 def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
@@ -85,7 +163,7 @@ def main(argv):
 
     sub = args.subparser_name
     if sub == "watch":
-        raise NotImplementedError()
+        adrem.watch_dir(args.path)
     elif sub == "file":
         adrem.remove_ads_path(args.path)
 
