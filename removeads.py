@@ -111,6 +111,7 @@ class AdRemover():
 
         FILE_LIST_DIRECTORY = 1
         FILE_ACTION_REMOVED = 2
+        FILE_ACTION_RENAMED_OLD_NAME = 4
 
         while True:
             # Get handle to directory
@@ -141,7 +142,8 @@ class AdRemover():
             processed = set()
             for action, fname in changes:
                 # Skip if file is being deleted or doesn't exist
-                if action == FILE_ACTION_REMOVED or not os.path.exists(path):
+                if action in [FILE_ACTION_REMOVED,FILE_ACTION_RENAMED_OLD_NAME] \
+                    or not os.path.exists(path):
                     continue
                 # Only process each file once
                 if fname in processed:
