@@ -44,6 +44,15 @@ def exit_on_ctrlsignal(func):
 def wrap_wait_call(func, *args, **kwargs):
     return func(*args, **kwargs)
 
+def GetAdSettingsDirectory(user=None):
+    EXT = r"Packages\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\LocalState\TargetedContentCache\v3\338387"
+    if user is None:
+        base = os.path.expandvars("%LOCALAPPDATA%")
+    else:
+        base = os.path.expanduser('~'+str(user))
+        base = os.path.join(base, 'AppData', 'Local')
+    return os.path.join(base, EXT)
+
 class AdRemover():
     def __init__(self, dry_run=False):
         self.dry_run = dry_run
@@ -146,13 +155,10 @@ def main(argv):
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
     parser.add_argument("--dry-run", action="store_true",
         help="Process and log but do not modify files")
-    subp = parser.add_subparsers(dest='subparser_name')
-
-    pwatch = subp.add_parser("watch", help="Watch for new ads and remove them")
-    pwatch.add_argument("path", nargs="?", const=None, help="Directory path to watch")
-
-    pfile = subp.add_parser("file", help="Remove ads from specific file")
-    pfile.add_argument("path", help="Path to file or directory to remove lock screen ads from")
+    parser.add_argument("--watch", action="store_true",
+        help="Continue running, watch directory for new Spotlight files, and remove ads from them")
+    parser.add_argument("path", nargs="?", default=GetAdSettingsDirectory(),
+        help="Path to file or directory to remove lock screen ads from. Default: %(default)s")
 
     args = parser.parse_args(argv[1:])
 
@@ -161,10 +167,9 @@ def main(argv):
 
     adrem = AdRemover(dry_run=args.dry_run)
 
-    sub = args.subparser_name
-    if sub == "watch":
+    if args.watch:
         adrem.watch_dir(args.path)
-    elif sub == "file":
+    else:
         adrem.remove_ads_path(args.path)
 
 if __name__ == "__main__":
