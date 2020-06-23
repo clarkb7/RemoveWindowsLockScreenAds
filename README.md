@@ -5,14 +5,15 @@ This script parses the JSON configuration for Spotlight, located in `%LOCALAPPDA
 
 ## Usage
 ```
-usage: removeads.py [-h] [-v] [--dry-run] [--watch] [path]
+usage: removeads.py [-h] [-v] [--dry-run] [--watch] [--remove-credits] [path]
 
 positional arguments:
   path           Path to file or directory to remove lock screen ads from.
 
 optional arguments:
-  -h, --help     show this help message and exit
-  -v, --verbose  Enable verbose logging
-  --dry-run      Process and log but do not modify files
-  --watch        Continue running, watch directory for new Spotlight files, and remove ads from them
+  -h, --help        show this help message and exit
+  -v, --verbose     Enable verbose logging
+  --dry-run         Process and log but do not modify files
+  --watch           Continue running, watch directory for new Spotlight files, and remove ads from them
+  --remove-credits  Remove the image credits box
 ```

@@ -54,8 +54,9 @@ def GetAdSettingsDirectory(user=None):
     return os.path.join(base, EXT)
 
 class AdRemover():
-    def __init__(self, dry_run=False):
+    def __init__(self, dry_run=False, remove_credits=False):
         self.dry_run = dry_run
+        self.remove_credits = remove_credits
 
     @catch_exception
     def remove_ads_file(self, path):
@@ -77,7 +78,12 @@ class AdRemover():
                     logger.debug("Removing ad: '{}'".format(prop['title']['text']))
                 elif "infoHotspot" == prop['template']['text']:
                     # Image info/credits
-                    keep_items.append(item)
+                    if self.remove_credits:
+                        logger.debug("Removing credits: '{}' - '{}'".format(
+                            prop['description']['text'],
+                            prop['copyright']['text']))
+                    else:
+                        keep_items.append(item)
                 else:
                     logger.debug("Skipping unknown template type: {}".format(prop['template']['text']))
             except KeyError as e:
@@ -159,6 +165,8 @@ def main(argv):
         help="Process and log but do not modify files")
     parser.add_argument("--watch", action="store_true",
         help="Continue running, watch directory for new Spotlight files, and remove ads from them")
+    parser.add_argument("--remove-credits", action="store_true",
+        help="Remove the image credits box")
     parser.add_argument("path", nargs="?", default=GetAdSettingsDirectory(),
         help="Path to file or directory to remove lock screen ads from. Default: %(default)s")
 
@@ -167,7 +175,7 @@ def main(argv):
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
 
-    adrem = AdRemover(dry_run=args.dry_run)
+    adrem = AdRemover(dry_run=args.dry_run, remove_credits=args.remove_credits)
 
     if args.watch:
         adrem.watch_dir(args.path)
