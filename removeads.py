@@ -93,7 +93,7 @@ class AdRemover():
 
         if not self.dry_run:
             with open(path, 'w') as f:
-                json.dump(jso, f)
+                json.dump(jso, f, ensure_ascii=False)
 
     def remove_ads_dir(self, path):
         for fpath in os.listdir(path):
