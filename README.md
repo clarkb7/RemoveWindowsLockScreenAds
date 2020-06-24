@@ -1,7 +1,16 @@
 # Remove Windows lock screen/Spotlight Ads
-Remove Windows lock screen/Spotlight ads while keeping the Spotlight image backgrounds.
+Remove Windows lock screen/Spotlight ads while keeping the rotating Spotlight image backgrounds. **The effect is immediate, there is no restart or logoff required.**
 
-This script parses the JSON configuration for Spotlight, located in `%LOCALAPPDATA%`. The effect is immediate, there is no restart or logoff required.
+
+This script parses the JSON configuration for Spotlight, located in `%LOCALAPPDATA%`, to remove the buzzfeed-esque ads that clutter the lock screen.
+<p align="center">
+  <img src="screenshots/ad.PNG" />
+</p>
+
+By default the image credits are kept. Pass `--remove-credits` if you would like them removed, too.
+<p align="center">
+  <img src="screenshots/credits.PNG" />
+</p>
 
 ## Usage
 ```
