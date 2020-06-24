@@ -3,10 +3,13 @@ import sys
 import argparse
 import json
 import functools
+import subprocess
+import shutil
 
 import win32api
 import win32file
 import win32con
+import winreg
 
 import logging
 logger = logging.getLogger("RemoveWindowsLockScreenAds")
@@ -31,7 +34,7 @@ def exit_on_ctrlsignal(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         def handler(ctrltype):
-            exit(1)
+            sys.exit(1)
             return 1
         win32api.SetConsoleCtrlHandler(handler, True)
         try:
@@ -54,6 +57,8 @@ def GetAdSettingsDirectory(user=None):
     return os.path.join(base, EXT)
 
 class AdRemover():
+    INSTALL_LOCATION = os.path.expandvars(r"%LOCALAPPDATA%\RemoveWindowsLockScreenAds\RemoveWindowsLockScreenAds.exe")
+
     def __init__(self, dry_run=False, remove_credits=False):
         self.dry_run = dry_run
         self.remove_credits = remove_credits
@@ -158,28 +163,108 @@ class AdRemover():
                 filepath = os.path.join(path, fname)
                 self.remove_ads_file(filepath)
 
+    def __autorun_key(self, do_add, path=None):
+        key = "RemoveWindowsLockScreenAds"
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r'Software\Microsoft\Windows\CurrentVersion\Run',
+            0, winreg.KEY_SET_VALUE
+        ) as hKey:
+            if do_add:
+                cmdline = [self.INSTALL_LOCATION, '--watch']
+                if self.remove_credits:
+                    cmdline.append('--remove-credits')
+                if path is not None:
+                    cmdline.append(path)
+                winreg.SetValueEx(hKey, key, 0, winreg.REG_SZ,
+                    ' '.join(cmdline))
+            else:
+                try:
+                    winreg.DeleteValue(hKey, key)
+                except FileNotFoundError:
+                    pass
+
+    def install(self, path):
+        # Verify we are EXE
+        if not getattr(sys, 'frozen', False):
+            logger.error("Installing the .py is not supported, please use the .exe")
+            sys.exit(1)
+
+        # Get EXE path
+        app_path = sys.executable
+
+        try:
+            # Copy self to install location
+            os.makedirs(os.path.dirname(self.INSTALL_LOCATION), exist_ok=True)
+            shutil.copyfile(app_path, self.INSTALL_LOCATION)
+
+            # Create startup key
+            self.__autorun_key(True, path=path)
+        except Exception as e:
+            logger.error("Installation failed: {}".format(e))
+            self.uninstall()
+            return
+
+        logger.info("Installed to {}".format(self.INSTALL_LOCATION))
+
+    def uninstall(self):
+        # Remove autorun
+        try:
+            self.__autorun_key(False)
+        except Exception as e:
+            logger.error("Failed to remove autorun key: {}".format(e))
+
+        # Kill process
+        cmdline = ['TASKKILL', '/F', '/IM', os.path.basename(self.INSTALL_LOCATION)]
+        subprocess.run(cmdline, capture_output=True)
+
+        # Remove files
+        try:
+            path = os.path.dirname(self.INSTALL_LOCATION)
+            if os.path.exists(path):
+                shutil.rmtree(path)
+        except Exception as e:
+            logger.error("Failed to remove installed files: {}".format(e))
+        else:
+            logger.info("Uninstalled from {}".format(self.INSTALL_LOCATION))
+
 def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
     parser.add_argument("--dry-run", action="store_true",
         help="Process and log but do not modify files")
-    parser.add_argument("--watch", action="store_true",
-        help="Continue running, watch directory for new Spotlight files, and remove ads from them")
     parser.add_argument("--remove-credits", action="store_true",
         help="Remove the image credits box")
     parser.add_argument("path", nargs="?", default=GetAdSettingsDirectory(),
         help="Path to file or directory to remove lock screen ads from. Default: %(default)s")
 
+    actions = parser.add_argument_group(title="actions")
+    excl = actions.add_mutually_exclusive_group(required=True)
+    excl.add_argument("--once", action="store_true",
+        help="Remove ads from file(s) in path")
+    excl.add_argument("--watch", action="store_true",
+        help="Continue running, watch directory for new Spotlight files, and remove ads from them")
+    excl.add_argument("--install", action="store_true",
+        help="Start in --watch mode on login")
+    excl.add_argument("--uninstall", action="store_true",
+        help="Remove installed files and login task")
+
     args = parser.parse_args(argv[1:])
 
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(format='%(message)s', level=logging.INFO)
 
     adrem = AdRemover(dry_run=args.dry_run, remove_credits=args.remove_credits)
 
-    if args.watch:
+    if args.install:
+        adrem.install(args.path)
+    elif args.uninstall:
+        adrem.uninstall()
+    elif args.watch:
         adrem.watch_dir(args.path)
-    else:
+    elif args.once:
         adrem.remove_ads_path(args.path)
 
 if __name__ == "__main__":
