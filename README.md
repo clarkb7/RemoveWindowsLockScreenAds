@@ -1,6 +1,6 @@
 [![PyPI version](https://badge.fury.io/py/RemoveWindowsLockScreenAds.svg)](https://badge.fury.io/py/RemoveWindowsLockScreenAds)
 
-# Remove Windows lock screen/Spotlight Ads
+# Remove Windows lock screen ads/Spotlight Ads
 Remove Windows lock screen ads/Spotlight ads while keeping the rotating Spotlight image backgrounds. **The effect is immediate, there is no restart or logoff required.**
 
 This script can be run by any user, **no Administrator privileges are required.**

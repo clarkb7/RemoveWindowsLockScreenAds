@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setup(
     name='RemoveWindowsLockScreenAds',
-    version='0.1',
+    version='0.2',
     description='Remove Windows lock screen ads/Spotlight ads while keeping the rotating Spotlight image backgrounds.',
     long_description=long_desc,
     long_description_content_type="text/markdown",
