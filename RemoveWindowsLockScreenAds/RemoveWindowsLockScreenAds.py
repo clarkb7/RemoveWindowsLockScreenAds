@@ -205,9 +205,10 @@ class AdRemover():
         except Exception as e:
             logger.error("Installation failed: {}".format(e))
             self.uninstall()
-            return
+            return False
 
         logger.info("Successfully installed.")
+        return True
 
     def uninstall(self):
         # Remove autorun
@@ -261,8 +262,8 @@ def main(argv):
     adrem = AdRemover(dry_run=args.dry_run, remove_credits=args.remove_credits)
 
     if args.install:
-        adrem.install(args.path)
-        adrem.remove_ads_path(args.path)
+        if adrem.install(args.path):
+            adrem.remove_ads_path(args.path)
     elif args.uninstall:
         adrem.uninstall()
     elif args.watch:
