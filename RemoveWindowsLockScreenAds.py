@@ -257,6 +257,7 @@ def main(argv):
 
     if args.install:
         adrem.install(args.path)
+        adrem.remove_ads_path(args.path)
     elif args.uninstall:
         adrem.uninstall()
     elif args.watch:
