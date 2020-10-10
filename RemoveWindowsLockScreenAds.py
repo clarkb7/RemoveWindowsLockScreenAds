@@ -10,9 +10,14 @@ import win32api
 import win32file
 import win32con
 import winreg
+import win32gui
+import win32console
 
 import logging
 logger = logging.getLogger("RemoveWindowsLockScreenAds")
+
+def is_exe_frozen():
+    return getattr(sys, 'frozen', False)
 
 def catch_exception(func):
     @functools.wraps(func)
@@ -171,7 +176,7 @@ class AdRemover():
             0, winreg.KEY_SET_VALUE
         ) as hKey:
             if do_add:
-                cmdline = [self.INSTALL_LOCATION, '--watch']
+                cmdline = [self.INSTALL_LOCATION, '--watch', '--hide-console']
                 if self.remove_credits:
                     cmdline.append('--remove-credits')
                 if path is not None:
@@ -186,7 +191,7 @@ class AdRemover():
 
     def install(self, path):
         # Verify we are EXE
-        if not getattr(sys, 'frozen', False):
+        if not is_exe_frozen():
             logger.error("Installing the .py is not supported, please use the .exe")
             sys.exit(1)
 
@@ -235,6 +240,8 @@ def main(argv):
         help="Process and log but do not modify files")
     parser.add_argument("--remove-credits", action="store_true",
         help="Remove the image credits box")
+    parser.add_argument("--hide-console", action="store_true",
+        help="Hide the console window")
     parser.add_argument("path", nargs="?", default=GetAdSettingsDirectory(),
         help="Path to file or directory to remove lock screen ads from. Default: %(default)s")
 
@@ -255,6 +262,19 @@ def main(argv):
         logging.basicConfig(level=logging.DEBUG)
     else:
         logging.basicConfig(format='%(message)s', level=logging.INFO)
+
+    if args.hide_console:
+        # .exe only arg
+        if not is_exe_frozen():
+            logger.error("--hide-console is only supported for the .exe release")
+            sys.exit(1)
+        # If only two pids are pyinstaller bootloader and self, probably double clicked
+        if len(win32console.GetConsoleProcessList()) <= 2:
+            fwin = win32gui.GetForegroundWindow()
+            win32gui.ShowWindow(fwin, win32con.SW_HIDE)
+        else:
+            logger.warning("Console window not exclusive, ignoring `--hide-console`")
+            args.hide_console = False
 
     adrem = AdRemover(dry_run=args.dry_run, remove_credits=args.remove_credits)
 
