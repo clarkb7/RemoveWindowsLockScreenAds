@@ -57,7 +57,7 @@ def GetAdSettingsDirectory(user=None):
     return os.path.join(base, EXT)
 
 class AdRemover():
-    INSTALL_LOCATION = os.path.expandvars(r"%LOCALAPPDATA%\RemoveWindowsLockScreenAds\RemoveWindowsLockScreenAds.exe")
+    INSTALL_LOCATION = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%\RemoveWindowsLockScreenAds"), os.path.basename(__file__))
 
     def __init__(self, dry_run=False, remove_credits=False):
         self.dry_run = dry_run
@@ -171,13 +171,14 @@ class AdRemover():
             0, winreg.KEY_SET_VALUE
         ) as hKey:
             if do_add:
-                cmdline = [self.INSTALL_LOCATION, '--watch']
+                cmdline = [sys.executable, self.INSTALL_LOCATION, '--watch']
                 if self.remove_credits:
                     cmdline.append('--remove-credits')
                 if path is not None:
                     cmdline.append(path)
-                winreg.SetValueEx(hKey, key, 0, winreg.REG_SZ,
-                    ' '.join(cmdline))
+                cmdline = ' '.join(cmdline)
+                logger.info("On startup will run:\n\t{}".format(cmdline))
+                winreg.SetValueEx(hKey, key, 0, winreg.REG_SZ, cmdline)
             else:
                 try:
                     winreg.DeleteValue(hKey, key)
@@ -185,18 +186,14 @@ class AdRemover():
                     pass
 
     def install(self, path):
-        # Verify we are EXE
-        if not getattr(sys, 'frozen', False):
-            logger.error("Installing the .py is not supported, please use the .exe")
-            sys.exit(1)
-
-        # Get EXE path
-        app_path = sys.executable
+        # Show a warning if using python.exe
+        if os.path.basename(sys.executable) == 'python.exe':
+            logger.warning("WARNING: Installing using python.exe, a command prompt window will be left open. We recommend installing with pythonw.exe.")
 
         try:
-            # Copy self to install location
+            # Copy self (script) to install location
             os.makedirs(os.path.dirname(self.INSTALL_LOCATION), exist_ok=True)
-            shutil.copyfile(app_path, self.INSTALL_LOCATION)
+            shutil.copyfile(__file__, self.INSTALL_LOCATION)
 
             # Create startup key
             self.__autorun_key(True, path=path)
@@ -205,7 +202,7 @@ class AdRemover():
             self.uninstall()
             return
 
-        logger.info("Installed to {}".format(self.INSTALL_LOCATION))
+        logger.info("Successfully installed.")
 
     def uninstall(self):
         # Remove autorun
