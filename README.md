@@ -1,20 +1,34 @@
-# Remove Windows lock screen/Spotlight Ads
-Remove Windows lock screen/Spotlight ads while keeping the rotating Spotlight image backgrounds. **The effect is immediate, there is no restart or logoff required.**
+[![PyPI version](https://badge.fury.io/py/RemoveWindowsLockScreenAds.svg)](https://badge.fury.io/py/RemoveWindowsLockScreenAds)
 
+# Remove Windows lock screen/Spotlight Ads
+Remove Windows lock screen ads/Spotlight ads while keeping the rotating Spotlight image backgrounds. **The effect is immediate, there is no restart or logoff required.**
+
+This script can be run by any user, **no Administrator privileges are required.**
 
 This script parses the JSON configuration for Spotlight, located in `%LOCALAPPDATA%`, to remove the buzzfeed-esque ads that clutter the lock screen.
 <p align="center">
-  <img src="screenshots/ad.PNG" />
+  <img src="https://github.com/clarkb7/RemoveWindowsLockScreenAds/blob/master/screenshots/ad.PNG?raw=true" />
 </p>
 
 By default the image credits are kept. Pass `--remove-credits` if you would like them removed, too.
 <p align="center">
-  <img src="screenshots/credits.PNG" />
+  <img src="https://github.com/clarkb7/RemoveWindowsLockScreenAds/blob/master/screenshots/credits.PNG?raw=true" />
 </p>
 
-## Usage
+## Installation
 ```
-usage: removeads.py [-h] [-v] [--dry-run] [--remove-credits] (--once | --watch | --install | --uninstall) [path]
+python -m pip install --user RemoveWindowsLockScreenAds
+pythonw -m RemoveWindowsLockScreenAds --install
+```
+
+## Try it out without modifying anything
+```
+python -m RemoveWindowsLockScreenAds --once --dry-run --verbose
+```
+
+## Detailed Usage
+```
+usage: RemoveWindowsLockScreenAds.py [-h] [-v] [--dry-run] [--remove-credits] (--once | --watch | --install | --uninstall) [path]
 
 positional arguments:
   path              Path to file or directory to remove lock screen ads from.
@@ -31,3 +45,4 @@ actions:
   --install         Start in --watch mode on login
   --uninstall       Remove installed files and login task
 ```
+
