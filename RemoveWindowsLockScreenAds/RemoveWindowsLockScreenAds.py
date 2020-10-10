@@ -5,6 +5,7 @@ import json
 import functools
 import subprocess
 import shutil
+import time
 
 import win32api
 import win32file
@@ -57,7 +58,7 @@ def GetAdSettingsDirectory(user=None):
     return os.path.join(base, EXT)
 
 class AdRemover():
-    INSTALL_LOCATION = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%\RemoveWindowsLockScreenAds"), os.path.basename(__file__))
+    INSTALL_LOCATION = os.path.expandvars(r"%LOCALAPPDATA%\RemoveWindowsLockScreenAds")
 
     def __init__(self, dry_run=False, remove_credits=False):
         self.dry_run = dry_run
@@ -171,14 +172,18 @@ class AdRemover():
             0, winreg.KEY_SET_VALUE
         ) as hKey:
             if do_add:
-                cmdline = [sys.executable, self.INSTALL_LOCATION, '--watch']
+                # Run key has maximum length of 260 chars, so make a .bat file
+                bat_path = os.path.join(self.INSTALL_LOCATION, 'RemoveWindowsLockScreenAds.bat')
+                cmdline = ['start', sys.executable, os.path.join(self.INSTALL_LOCATION, os.path.basename(__file__)), '--watch']
                 if self.remove_credits:
                     cmdline.append('--remove-credits')
                 if path is not None:
                     cmdline.append(path)
                 cmdline = ' '.join(cmdline)
                 logger.info("On startup will run:\n\t{}".format(cmdline))
-                winreg.SetValueEx(hKey, key, 0, winreg.REG_SZ, cmdline)
+                with open(bat_path, 'w') as f:
+                    f.write(cmdline)
+                winreg.SetValueEx(hKey, key, 0, winreg.REG_SZ, bat_path)
             else:
                 try:
                     winreg.DeleteValue(hKey, key)
@@ -192,8 +197,8 @@ class AdRemover():
 
         try:
             # Copy self (script) to install location
-            os.makedirs(os.path.dirname(self.INSTALL_LOCATION), exist_ok=True)
-            shutil.copyfile(__file__, self.INSTALL_LOCATION)
+            os.makedirs(self.INSTALL_LOCATION, exist_ok=True)
+            shutil.copyfile(__file__, os.path.join(self.INSTALL_LOCATION, os.path.basename(__file__)))
 
             # Create startup key
             self.__autorun_key(True, path=path)
@@ -217,13 +222,13 @@ class AdRemover():
 
         # Remove files
         try:
-            path = os.path.dirname(self.INSTALL_LOCATION)
+            path = self.INSTALL_LOCATION
             if os.path.exists(path):
                 shutil.rmtree(path)
         except Exception as e:
             logger.error("Failed to remove installed files: {}".format(e))
         else:
-            logger.info("Uninstalled from {}".format(self.INSTALL_LOCATION))
+            logger.info("Uninstalled from {}".format(path))
 
 def main(argv):
     parser = argparse.ArgumentParser()
