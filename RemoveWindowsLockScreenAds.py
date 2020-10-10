@@ -70,7 +70,7 @@ class AdRemover():
 
         logger.debug("Processing ContentDeliveryManager file: {}".format(os.path.basename(path)))
 
-        with open(path, 'r') as f:
+        with open(path, 'r', encoding='utf-8') as f:
             jso = json.load(f)
 
         # Iterate list of items and pick the ones we want to keep
@@ -97,7 +97,7 @@ class AdRemover():
         jso['items'] = keep_items
 
         if not self.dry_run:
-            with open(path, 'w') as f:
+            with open(path, 'w', encoding='utf-8') as f:
                 json.dump(jso, f, ensure_ascii=False)
 
     def remove_ads_dir(self, path):
