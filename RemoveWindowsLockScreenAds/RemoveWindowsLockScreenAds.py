@@ -218,8 +218,12 @@ class AdRemover():
             logger.error("Failed to remove autorun key: {}".format(e))
 
         # Kill process
-        cmdline = ['TASKKILL', '/F', '/IM', os.path.basename(self.INSTALL_LOCATION)]
-        subprocess.run(cmdline, capture_output=True)
+        while True:
+            cmdline = ['wmic', 'Path', 'win32_process', 'Where', "CommandLine Like '%{}%'".format(self.INSTALL_LOCATION.replace('\\','\\\\')), 'Call', 'Terminate']
+            r = subprocess.run(cmdline, capture_output=True)
+            if b'No Instance' in r.stdout:
+                break
+            time.sleep(.1)
 
         # Remove files
         try:
