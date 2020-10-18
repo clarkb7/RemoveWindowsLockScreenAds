@@ -6,11 +6,13 @@ import functools
 import subprocess
 import shutil
 import time
+import struct
 
 import win32api
 import win32file
 import win32con
 import winreg
+from win32com.shell import shell, shellcon
 
 import logging
 logger = logging.getLogger("RemoveWindowsLockScreenAds")
@@ -47,6 +49,15 @@ def exit_on_ctrlsignal(func):
 @exit_on_ctrlsignal
 def wrap_wait_call(func, *args, **kwargs):
     return func(*args, **kwargs)
+
+def is_console_app():
+    """
+    Returns True if PE SUBSYSTEM of sys.executable is CONSOLE
+    """
+    res,_ = shell.SHGetFileInfo(sys.executable, 0, shellcon.SHGFI_EXETYPE)
+    # LOWORD = NE or PE and HIWORD = Windows version --> Windows application.
+    # LOWORD = PE and HIWORD = 0 --> Console application or .bat file.
+    return res == struct.unpack("<H", b'PE')[0]
 
 def GetAdSettingsDirectory(user=None):
     EXT = r"Packages\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\LocalState\TargetedContentCache\v3\338387"
@@ -164,7 +175,7 @@ class AdRemover():
                 filepath = os.path.join(path, fname)
                 self.remove_ads_file(filepath)
 
-    def __autorun_key(self, do_add, path=None):
+    def __autorun_key(self, do_add, run_args=None, path=None):
         key = "RemoveWindowsLockScreenAds"
         with winreg.OpenKey(
             winreg.HKEY_CURRENT_USER,
@@ -174,7 +185,8 @@ class AdRemover():
             if do_add:
                 # Run key has maximum length of 260 chars, so make a .bat file
                 bat_path = os.path.join(self.INSTALL_LOCATION, 'RemoveWindowsLockScreenAds.bat')
-                cmdline = ['start', sys.executable, os.path.join(self.INSTALL_LOCATION, os.path.basename(__file__)), '--watch']
+                cmdline = ['start'] + run_args + ['--watch']
+                # sys.executable, os.path.join(self.INSTALL_LOCATION, os.path.basename(__file__)),
                 if self.remove_credits:
                     cmdline.append('--remove-credits')
                 if path is not None:
@@ -192,16 +204,24 @@ class AdRemover():
 
     def install(self, path):
         # Show a warning if using python.exe
-        if os.path.basename(sys.executable) == 'python.exe':
-            logger.warning("WARNING: Installing using python.exe, a command prompt window will be left open. We recommend installing with pythonw.exe.")
+        if is_console_app():
+            logger.warning("WARNING: Installing using console application, a command prompt window will be left open. We recommend installing with pythonw.exe or RemoveWindowsLockScreenAds.noconsole.exe.")
 
         try:
-            # Copy self (script) to install location
+            # Copy self to install location
             os.makedirs(self.INSTALL_LOCATION, exist_ok=True)
-            shutil.copyfile(__file__, os.path.join(self.INSTALL_LOCATION, os.path.basename(__file__)))
+            if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+                # Running from pyinstaller .exe
+                inst_path = os.path.join(self.INSTALL_LOCATION, os.path.basename(sys.executable))
+                run_args = [inst_path]
+            else:
+                # Running as python module
+                inst_path = os.path.join(self.INSTALL_LOCATION, os.path.basename(__file__))
+                run_args = [sys.executable, inst_path]
+            shutil.copyfile(sys.executable, inst_path)
 
             # Create startup key
-            self.__autorun_key(True, path=path)
+            self.__autorun_key(True, run_args=run_args, path=path)
         except Exception as e:
             logger.error("Installation failed: {}".format(e))
             self.uninstall()
@@ -258,13 +278,21 @@ def main(argv):
 
     args = parser.parse_args(argv[1:])
 
-    if args.verbose:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.basicConfig(format='%(message)s', level=logging.INFO)
+    # Set a log file for noconsole installation
+    filename = None
+    if not is_console_app() and (args.install or args.uninstall):
+        filename = os.path.join(os.path.expandvars("%TEMP%"), "RemoveWindowsLockScreenAds.install.log")
 
+    # Set log level and configure logger
+    if args.verbose:
+        logging.basicConfig(filename=filename, level=logging.DEBUG)
+    else:
+        logging.basicConfig(filename=filename, format='%(message)s', level=logging.INFO)
+
+    # Create instance
     adrem = AdRemover(dry_run=args.dry_run, remove_credits=args.remove_credits)
 
+    # Perform requested action
     if args.install:
         if adrem.install(args.path):
             adrem.remove_ads_path(args.path)

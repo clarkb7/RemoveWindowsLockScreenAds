@@ -16,14 +16,28 @@ By default the image credits are kept. Pass `--remove-credits` if you would like
 </p>
 
 ## Installation
+If you have Python installed
 ```
 python -m pip install --user RemoveWindowsLockScreenAds
 pythonw -m RemoveWindowsLockScreenAds --install
 ```
+If you don't want to install Python, download the [standalone installer](https://github.com/clarkb7/RemoveWindowsLockScreenAds/releases/latest/download/RemoveWindowsLockScreenAds.noconsole.exe), press `WindowsKey+r`, then paste and run
+```
+%USERPROFILE%\Downloads\RemoveWindowsLockScreenAds.noconsole.exe --install
+```
+
+When run with pythonw or RemoveWindowsLockScreenAds.noconsole.exe there is no console output. However, --install and --uninstall will log to `%TEMP%\RemoveWindowsLockScreenAds.install.log`.
+
+You can enable and disable RemoveWindowsLockScreenAds from the Startup tab in Windows Task Manager.
 
 ## Try it out without modifying anything
+Python
 ```
 python -m RemoveWindowsLockScreenAds --once --dry-run --verbose
+```
+Standalone console program
+```
+RemoveWindowsLockScreenAds.console.exe --once --dry-run --verbose
 ```
 
 ## Detailed Usage
