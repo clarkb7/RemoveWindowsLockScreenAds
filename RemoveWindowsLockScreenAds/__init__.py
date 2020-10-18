@@ -1,2 +1,2 @@
-from .RemoveWindowsLockScreenAds import GetAdSettingsDirectory, AdRemover
+from RemoveWindowsLockScreenAds.RemoveWindowsLockScreenAds import GetAdSettingsDirectory, AdRemover
 

@@ -1,4 +1,4 @@
 import sys
-from .RemoveWindowsLockScreenAds import main
+from RemoveWindowsLockScreenAds.RemoveWindowsLockScreenAds import main
 main(sys.argv)
 
