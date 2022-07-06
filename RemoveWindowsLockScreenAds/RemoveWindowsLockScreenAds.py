@@ -122,6 +122,37 @@ class AdRemover():
         elif os.path.isfile(path):
             self.remove_ads_file(path)
 
+    def get_dir_changes(self, path):
+        FILE_LIST_DIRECTORY = 1
+
+        # Get handle to directory
+        hDir = win32file.CreateFile(
+            path,
+            FILE_LIST_DIRECTORY,
+            win32con.FILE_SHARE_READ | win32con.FILE_SHARE_WRITE | win32con.FILE_SHARE_DELETE,
+            None,
+            win32con.OPEN_EXISTING,
+            win32con.FILE_FLAG_BACKUP_SEMANTICS,
+            None)
+
+        # Blocking wait for something in the directory to change or be created
+        changes = None
+        try:
+            changes = wrap_wait_call(win32file.ReadDirectoryChangesW,
+                hDir,
+                100*(4*3+256*2), # Enough for 100 FILE_NOTIFY_INFORMATION WMAX_PATH structs
+                False,
+                win32con.FILE_NOTIFY_CHANGE_FILE_NAME |
+                win32con.FILE_NOTIFY_CHANGE_LAST_WRITE,
+                None,
+                None)
+        finally:
+            # Close the handle so we can make changes to the files
+            # without being notified about it (infinite loop)
+            hDir.close()
+
+        return changes
+
     def watch_dir(self, path):
         if not os.path.exists(path):
             raise ValueError("Path does not exist: {}".format(path))
@@ -132,35 +163,20 @@ class AdRemover():
         # Run once to start
         self.remove_ads_dir(path)
 
-        FILE_LIST_DIRECTORY = 1
         FILE_ACTION_REMOVED = 2
         FILE_ACTION_RENAMED_OLD_NAME = 4
 
         while True:
-            # Get handle to directory
-            hDir = win32file.CreateFile(
-                path,
-                FILE_LIST_DIRECTORY,
-                win32con.FILE_SHARE_READ | win32con.FILE_SHARE_WRITE | win32con.FILE_SHARE_DELETE,
-                None,
-                win32con.OPEN_EXISTING,
-                win32con.FILE_FLAG_BACKUP_SEMANTICS,
-                None)
-
-            # Blocking wait for something in the directory to change or be created
             try:
-                changes = wrap_wait_call(win32file.ReadDirectoryChangesW,
-                    hDir,
-                    100*(4*3+256*2), # Enough for 100 FILE_NOTIFY_INFORMATION WMAX_PATH structs
-                    False,
-                    win32con.FILE_NOTIFY_CHANGE_FILE_NAME |
-                    win32con.FILE_NOTIFY_CHANGE_LAST_WRITE,
-                    None,
-                    None)
-            finally:
-                # Close the handle so we can make changes to the files
-                # without being notified about it (infinite loop)
-                hDir.close()
+                changes = self.get_dir_changes(path)
+            except:
+                logger.exception("Error getting dir changes")
+                # We might have caught Windows updating the files
+                # Wait a bit and try again
+                time.sleep(5)
+                # Check all the files in dir since we weren't watching
+                self.remove_ads_dir(path)
+                continue
 
             processed = set()
             for action, fname in changes:
