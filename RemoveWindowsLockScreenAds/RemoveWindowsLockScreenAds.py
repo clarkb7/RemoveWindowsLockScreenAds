@@ -82,8 +82,12 @@ class AdRemover():
 
         logger.debug("Processing ContentDeliveryManager file: {}".format(os.path.basename(path)))
 
-        with open(path, 'r', encoding='utf-8') as f:
-            jso = json.load(f)
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                jso = json.load(f)
+        except json.decoder.JSONDecodeError:
+            logger.error(f"Invalid JSON file: {path}")
+            return None
 
         # Iterate list of items and pick the ones we want to keep
         keep_items = []
