@@ -1,0 +1,44 @@
+name: Publish package to PyPi and Github
+
+on:
+    push:
+        tags:
+            - '[0-9]+.[0-9]+.[0-9]+-?*'
+
+jobs:
+    use-build:
+        uses: ./.github/workflows/build.yml
+
+    publish:
+        needs: use-build
+        name: Publish
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/download-artifact@master
+          with:
+              name: dist-exe
+              path: dist.exe/
+        - uses: actions/download-artifact@master
+          with:
+              name: dist-pypi
+              path: dist/
+        - name: Publish to Test PyPi
+          uses: pypa/gh-action-pypi-publish@master
+          with:
+              password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+              repository_url: https://test.pypi.org/legacy/
+        - name: Publish to PyPi
+          uses: pypa/gh-action-pypi-publish@master
+          with:
+              password: ${{ secrets.PYPI_API_TOKEN }}
+        - name: Publish to Github
+          uses: "marvinpinto/action-automatic-releases@v1.2.1"
+          with:
+              repo_token: "${{ secrets.GITHUB_TOKEN }}"
+              automatic_release_tag: "${{ github.ref_name }}"
+              prerelease: false
+              draft: true
+              title: "DRAFT: Release version ${{ github.ref_name }}"
+              files: |
+                  dist.exe/*
+                  dist/*

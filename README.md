@@ -1,3 +1,4 @@
+[![Build](https://github.com/clarkb7/RemoveWindowsLockScreenAds/actions/workflows/build.yml/badge.svg)](https://github.com/clarkb7/RemoveWindowsLockScreenAds/actions/workflows/build.yml)
 [![PyPI version](https://badge.fury.io/py/RemoveWindowsLockScreenAds.svg)](https://badge.fury.io/py/RemoveWindowsLockScreenAds)
 
 # Remove Windows lock screen ads/Spotlight Ads

@@ -1,0 +1,44 @@
+[build-system]
+requires = [
+    "setuptools >= 61.0", 
+    "pywin32",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = [
+    "RemoveWindowsLockScreenAds",
+]
+
+[project]
+name = "RemoveWindowsLockScreenAds"
+version = "0.4.3"
+authors = [
+    { name="Branden Clark", email="clark@rpis.ec" },
+]
+description = "Remove Windows lock screen ads/Spotlight ads while keeping the rotating Spotlight image backgrounds."
+readme = "README.md"
+license = { text="MIT" }
+requires-python = ">=3.7"
+dependencies = [
+    "pywin32",
+]
+classifiers=[
+    "Development Status :: 4 - Beta",
+    "Operating System :: Microsoft :: Windows :: Windows 10",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Utilities",
+]
+keywords = [
+    "windows-spotlight",
+    "remove-ads",
+    "windows-lockscreen",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/clarkb7/RemoveWindowsLockScreenAds"
+"Bug Tracker" = "https://github.com/clarkb7/RemoveWindowsLockScreenAds/issues"
+
