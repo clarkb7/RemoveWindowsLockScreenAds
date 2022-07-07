@@ -10,16 +10,17 @@ jobs:
         runs-on: windows-latest
         steps:
         - uses: actions/checkout@master
-        - name: Set up Python 3.10
+        - name: Set up Python 3.7
           uses: actions/setup-python@v3
           with:
-              python-version: "3.10"
+              python-version: "3.7"
         - name: Install pypa/build
           run: >-
               python -m
               pip install
               build
               pyinstaller
+              pywin32
               --user
         - name: Build pypi and exe bundles
           run: powershell.exe bin\release.ps1
